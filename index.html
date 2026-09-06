@@ -680,7 +680,7 @@
           </div>
 
           <div class="form-foot">
-            <p>Al enviar, se abrirá WhatsApp con tu solicitud lista para enviar.</p>
+            <p>Tu solicitud se enviará de forma segura. Te contactaremos por WhatsApp.</p>
             <button class="button-dark form-submit" type="submit">Enviar solicitud ↗</button>
           </div>
           <div class="form-status" id="formStatus" role="status"></div>
@@ -719,7 +719,6 @@
   </footer>
 
   <script>
-    const WHATSAPP_NUMBER = "18094238579";
     const featureSets = {
       "Página web para mi negocio": ["Formulario de contacto", "Botón de WhatsApp", "Mapa de ubicación", "Galería de imágenes", "Sección de servicios"],
       "Landing page / página de campaña": ["Llamada a la acción", "Formulario de clientes", "Galería o video", "Botón de WhatsApp", "Sección de testimonios"],
@@ -751,33 +750,48 @@
       return field ? field.value.trim() : "";
     }
 
-    projectForm.addEventListener("submit", function(event) {
+    projectForm.addEventListener("submit", async function(event) {
       event.preventDefault();
       const data = new FormData(projectForm);
       const features = data.getAll("features");
-      const message = [
-        "Hola WedNova, quiero solicitar un proyecto.",
-        "",
-        "DATOS DEL CLIENTE",
-        "Nombre: " + fieldValue("name"),
-        "WhatsApp: " + fieldValue("contact"),
-        "",
-        "PROYECTO",
-        "Tipo: " + fieldValue("projectType"),
-        "Objetivo: " + fieldValue("goal"),
-        "Funciones: " + (features.length ? features.join(", ") : "Por definir"),
-        "Secciones: " + (fieldValue("sections") || "Por definir"),
-        "Estilo: " + fieldValue("style"),
-        "Contenido: " + fieldValue("content"),
-        "Integraciones: " + (fieldValue("integrations") || "Ninguna indicada"),
-        "Presupuesto: " + fieldValue("budget"),
-        "Fecha ideal: " + fieldValue("deadline"),
-        "Detalles extra: " + (fieldValue("extra") || "Ninguno")
-      ].join("\n");
-      const url = "https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(message);
-      window.open(url, "_blank", "noopener,noreferrer");
-      formStatus.textContent = "Tu solicitud está lista en WhatsApp. Solo falta pulsar “Enviar” para que WedNova la reciba.";
-      formStatus.classList.add("visible");
+      const submitButton = projectForm.querySelector(".form-submit");
+      const payload = {
+        name: fieldValue("name"),
+        contact: fieldValue("contact"),
+        projectType: fieldValue("projectType"),
+        goal: fieldValue("goal"),
+        features: features,
+        sections: fieldValue("sections"),
+        style: fieldValue("style"),
+        content: fieldValue("content"),
+        integrations: fieldValue("integrations"),
+        budget: fieldValue("budget"),
+        deadline: fieldValue("deadline"),
+        extra: fieldValue("extra")
+      };
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Enviando...";
+      formStatus.classList.remove("visible");
+
+      try {
+        const response = await fetch("/.netlify/functions/notify-whatsapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json().catch(function() { return {}; });
+        if (!response.ok) throw new Error(result.message || "No se pudo enviar la solicitud.");
+        formStatus.textContent = "¡Solicitud recibida! Gracias. WedNova revisará tu idea y te escribirá por WhatsApp.";
+        projectForm.reset();
+        renderFeatures();
+      } catch (error) {
+        formStatus.textContent = error.message || "No pudimos recibir la solicitud. Inténtalo otra vez en unos segundos.";
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Enviar solicitud ↗";
+        formStatus.classList.add("visible");
+      }
     });
 
     const menuToggle = document.getElementById("menuToggle");
@@ -822,7 +836,7 @@
         return "También desarrollamos sistemas a medida, reservas, tiendas online, paneles y otras funciones. Describe lo que debe hacer y lo convertimos en una solución clara.";
       }
       if (text.includes("solicitar") || text.includes("contratar") || text.includes("proyecto") || text.includes("whatsapp")) {
-        return "Perfecto. Pulsa “Solicitar mi página” y completa los detalles. Al finalizar, se abrirá WhatsApp con la información lista para enviarla a WedNova.";
+        return "Perfecto. Pulsa “Solicitar mi página” y completa los detalles. La solicitud se envía desde la página y WedNova te contactará por WhatsApp.";
       }
       return "Puedo orientarte sobre servicios, tipos de proyectos, tiempos y solicitudes. Prueba preguntando: “¿Qué páginas crean?” o “Quiero solicitar un sistema”.";
     }
