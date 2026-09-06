@@ -1,10 +1,9 @@
-const json = (statusCode, body) => ({
-  statusCode,
+const json = (statusCode, body) => new Response(JSON.stringify(body), {
+  status: statusCode,
   headers: {
     "Content-Type": "application/json",
     "Cache-Control": "no-store"
-  },
-  body: JSON.stringify(body)
+  }
 });
 
 const clean = (value, max = 2000) => String(value ?? "").trim().slice(0, max);
@@ -12,13 +11,13 @@ const clean = (value, max = 2000) => String(value ?? "").trim().slice(0, max);
 const escapeWhatsAppText = (value) => clean(value).replace(/[<>]/g, "");
 
 export default async (request) => {
-  if (request.httpMethod !== "POST") {
+  if (request.method !== "POST") {
     return json(405, { message: "Método no permitido." });
   }
 
   let data;
   try {
-    data = JSON.parse(request.body || "{}");
+    data = await request.json();
   } catch {
     return json(400, { message: "La solicitud no tiene un formato válido." });
   }
