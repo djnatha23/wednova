@@ -324,6 +324,7 @@
     .form-foot { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 10px; }
     .form-foot p { margin: 0; color: var(--muted); font-size: 11px; }
     .form-submit { border: 0; white-space: nowrap; }
+    .bot-field { position: absolute; left: -5000px; width: 1px; height: 1px; overflow: hidden; }
     .form-status { display: none; margin: 15px 0 0; padding: 12px; border-radius: 10px; color: #275c31; background: #e1f0e3; font-size: 12px; }
     .form-status.visible { display: block; }
 
@@ -548,7 +549,7 @@
             <span class="eyebrow">El proceso</span>
             <h2>De la idea a la pantalla.</h2>
           </div>
-          <p>Cuéntanos qué necesitas. Revisamos tu idea y conversamos contigo por WhatsApp para definir el mejor camino.</p>
+          <p>Cuéntanos qué necesitas. Revisamos tu idea y te respondemos por correo para definir el mejor camino.</p>
         </div>
         <div class="process-grid">
           <article class="process-card">
@@ -559,7 +560,7 @@
           <article class="process-card">
             <span>02 — CONVERSEMOS</span>
             <h3>Negociamos contigo</h3>
-            <p>Recibimos tu información en WhatsApp, resolvemos dudas y acordamos el alcance del trabajo.</p>
+            <p>Recibimos tu solicitud por correo, resolvemos dudas y acordamos el alcance del trabajo.</p>
           </article>
           <article class="process-card">
             <span>03 — CREEMOS</span>
@@ -578,11 +579,15 @@
           <p>Mientras más detalles compartas, mejor podremos entender tu idea. No necesitas saber de tecnología: explícanos lo que quieres lograr.</p>
           <div class="contact-mini">
             <strong>¿Tienes una pregunta?</strong>
-            También puedes escribir directamente al WhatsApp de WedNova.
+            También puedes dejar tu WhatsApp o teléfono para que podamos contactarte.
           </div>
         </div>
 
-        <form class="request-form" id="projectForm">
+        <form class="request-form" id="projectForm" name="wednova-project-request" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+          <input type="hidden" name="form-name" value="wednova-project-request" />
+          <div class="bot-field" aria-hidden="true">
+            <label>Si eres una persona, deja este campo vacío: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
+          </div>
           <div class="form-row">
             <div class="field">
               <label for="name">Tu nombre</label>
@@ -680,7 +685,7 @@
           </div>
 
           <div class="form-foot">
-            <p>Tu solicitud se enviará de forma segura. Te contactaremos por WhatsApp.</p>
+            <p>Tu solicitud se enviará de forma segura y llegará a nuestro correo.</p>
             <button class="button-dark form-submit" type="submit">Enviar solicitud ↗</button>
           </div>
           <div class="form-status" id="formStatus" role="status"></div>
@@ -745,44 +750,23 @@
     projectType.addEventListener("change", renderFeatures);
     renderFeatures();
 
-    function fieldValue(name) {
-      const field = projectForm.elements[name];
-      return field ? field.value.trim() : "";
-    }
-
     projectForm.addEventListener("submit", async function(event) {
       event.preventDefault();
       const data = new FormData(projectForm);
-      const features = data.getAll("features");
       const submitButton = projectForm.querySelector(".form-submit");
-      const payload = {
-        name: fieldValue("name"),
-        contact: fieldValue("contact"),
-        projectType: fieldValue("projectType"),
-        goal: fieldValue("goal"),
-        features: features,
-        sections: fieldValue("sections"),
-        style: fieldValue("style"),
-        content: fieldValue("content"),
-        integrations: fieldValue("integrations"),
-        budget: fieldValue("budget"),
-        deadline: fieldValue("deadline"),
-        extra: fieldValue("extra")
-      };
 
       submitButton.disabled = true;
       submitButton.textContent = "Enviando...";
       formStatus.classList.remove("visible");
 
       try {
-        const response = await fetch("/.netlify/functions/notify-whatsapp", {
+        const response = await fetch("/", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams(data).toString()
         });
-        const result = await response.json().catch(function() { return {}; });
-        if (!response.ok) throw new Error(result.message || "No se pudo enviar la solicitud.");
-        formStatus.textContent = "¡Solicitud recibida! Gracias. WedNova revisará tu idea y te escribirá por WhatsApp.";
+        if (!response.ok) throw new Error("No se pudo enviar la solicitud. Inténtalo nuevamente.");
+        formStatus.textContent = "¡Solicitud recibida! WedNova revisará tu idea y te responderá por correo.";
         projectForm.reset();
         renderFeatures();
       } catch (error) {
@@ -827,7 +811,7 @@
         return "Creamos páginas para negocios, landing pages, tiendas online, portafolios, blogs, reservas y sistemas personalizados. Puedes contarme tu idea en el formulario de solicitud.";
       }
       if (text.includes("precio") || text.includes("costo") || text.includes("cuánto") || text.includes("cuanto") || text.includes("cotiza")) {
-        return "Cada proyecto depende de sus funciones y alcance. Envíanos tu idea para revisarla y negociar una cotización personalizada por WhatsApp.";
+        return "Cada proyecto depende de sus funciones y alcance. Envíanos tu idea para revisarla y negociar una cotización personalizada.";
       }
       if (text.includes("tiempo") || text.includes("rápido") || text.includes("rapido") || text.includes("hora")) {
         return "Algunas páginas sencillas pueden estar listas en pocas horas. El tiempo final depende del contenido y las funciones que necesite tu proyecto.";
@@ -836,7 +820,7 @@
         return "También desarrollamos sistemas a medida, reservas, tiendas online, paneles y otras funciones. Describe lo que debe hacer y lo convertimos en una solución clara.";
       }
       if (text.includes("solicitar") || text.includes("contratar") || text.includes("proyecto") || text.includes("whatsapp")) {
-        return "Perfecto. Pulsa “Solicitar mi página” y completa los detalles. La solicitud se envía desde la página y WedNova te contactará por WhatsApp.";
+        return "Perfecto. Pulsa “Solicitar mi página” y completa los detalles. La solicitud se envía desde la página y WedNova te responderá por correo.";
       }
       return "Puedo orientarte sobre servicios, tipos de proyectos, tiempos y solicitudes. Prueba preguntando: “¿Qué páginas crean?” o “Quiero solicitar un sistema”.";
     }
